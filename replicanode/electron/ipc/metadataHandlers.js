@@ -3,19 +3,24 @@ const connector = require("../../core/salesforceConnector");
 
 function registerHandlers() {
 
-    ipcMain.handle("sf-login", async (event, creds) => {
-        return await connector.login(creds.username, creds.password);
+    ipcMain.handle("login", async (event, username, password) => {
+        if(!username || !password){
+            return {success : false, message: "Invalid Credentails"};
+        }
+        const sfconnector = await connector.login(username, password);
+        console.log('SF connector : ',sfconnector);
+        return sfconnector;
     });
 
-    ipcMain.handle("sf-get-metadata", async () => {
+    ipcMain.handle("getMetadata", async () => {
         return await connector.getMetadata();
     });
 
-    ipcMain.handle("sf-backup", async (event, selected) => {
+    ipcMain.handle("backup", async (event, selected) => {
         return await connector.backupMetadata(selected);
     });
 
-    ipcMain.handle("sf-logout", async () => {
+    ipcMain.handle("logout", async () => {
         connector.logout();
         return { success: true };
     });
