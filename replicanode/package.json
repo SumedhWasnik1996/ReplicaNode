@@ -1,0 +1,21 @@
+{
+  "name"   : "replicanode",
+  "version": "1.0.0",
+  "main"   : "electron/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author"  : "",
+  "license" : "ISC",
+  "dependencies": {
+    "electron" : "^40.4.1",
+    "fs-extra" : "^11.3.3",
+    "jsforce"  : "^3.10.14"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.24",
+    "postcss"     : "^8.5.6",
+    "tailwindcss" : "^3.4.4"
+  }
+}
