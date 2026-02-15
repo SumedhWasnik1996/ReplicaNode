@@ -25,6 +25,16 @@ function registerHandlers() {
         return { success: true };
     });
 
+    ipcMain.handle("getMetadataItems", async (e, type) => {
+        const conn = getCurrentOrgConnection();
+        return await getMetadataItems(conn, type);
+    });
+
+    ipcMain.handle("getMetadataContent", async (e, type, name) => {
+        const conn = getCurrentOrgConnection();
+        return await getMetadataContent(conn, type, name);
+    });
+
 }
 
 module.exports = registerHandlers;

@@ -22,7 +22,6 @@ async function login(username, password) {
     }
 }
 
-
 async function getMetadata() {
     if (!currentConnection) throw new Error("Not logged in");
 
