@@ -1,0 +1,23 @@
+<div class="flex h-full max-h-full">
+
+  <!-- Sidebar for Metadata Groups -->
+  <aside id="metadataSidebar"
+    class="w-64 bg-gray-800 border-r border-gray-700 hidden md:flex flex-col overflow-y-auto">
+    <!-- Group buttons will be dynamically injected -->
+  </aside>
+
+  <!-- Mobile dropdown -->
+  <div class="md:hidden mb-4">
+    <select id="mobileGroupSelect" class="w-full bg-gray-700 rounded text-white">
+      <!-- Options dynamically populated -->
+    </select>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-4 overflow-auto">
+    <div id="metadataContent">
+      <!-- Metadata items will be rendered here -->
+    </div>
+  </div>
+
+</div>
