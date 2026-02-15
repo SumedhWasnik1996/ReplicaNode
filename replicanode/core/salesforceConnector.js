@@ -6,14 +6,22 @@ let currentConnection = null;
 let currentOrg = null;
 
 async function login(username, password) {
-    const conn = new jsforce.Connection();
-    await conn.login(username, password);
+    try {
+        const conn = new jsforce.Connection();
+        await conn.login(username, password);
 
-    currentConnection = conn;
-    currentOrg = username.replace(/[@.]/g, "_");
+        currentConnection = conn;
+        currentOrg = username.replace(/[@.]/g, "_");
 
-    return { success: true, org: currentOrg };
+        return { success: true, org: currentOrg };
+    } catch (err) {
+        return {
+            success: false,
+            message: err.message || "Login failed"
+        };
+    }
 }
+
 
 async function getMetadata() {
     if (!currentConnection) throw new Error("Not logged in");

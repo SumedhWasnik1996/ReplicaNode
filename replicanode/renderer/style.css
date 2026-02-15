@@ -199,6 +199,7 @@ input,
 optgroup,
 select,
 textarea {
+  color: black;
   font-family: inherit;
   /* 1 */
   font-feature-settings: inherit;
@@ -629,4 +630,20 @@ video {
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity));
+}
+
+.tabBtn {
+  @apply bg-gray-700 hover:bg-gray-600 text-white;
+}
+
+.tabContent {
+  @apply bg-gray-800 p-4 rounded;
+}
+
+.input {
+  @apply bg-gray-800 border border-gray-700 p-2 rounded w-80 mb-3;
+}
+
+.btn {
+  @apply bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded;
 }

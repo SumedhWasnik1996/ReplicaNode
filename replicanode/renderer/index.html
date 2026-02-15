@@ -1,30 +1,53 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <link href="style.css" rel="stylesheet">
 </head>
+
 <body class="bg-gray-900 text-white">
 
-<div id="loginScreen" class="p-6">
-  <h1 class="text-xl mb-4">replicanode Login</h1>
+  <div id="loginScreen" class="p-6">
+    <div id="loginSpinner" class="hidden mt-3 text-indigo-400">
+      Logging in...
+    </div>
+    <h1 class="text-xl mb-4">Login to Salesforce</h1>
 
-  <input id="username" placeholder="Username" class="input"><br>
-  <input id="password" type="password" placeholder="Password" class="input"><br>
+    <input id="username" placeholder="Username" class="input"><br>
+    <input id="password" type="password" placeholder="Password" class="input"><br>
 
-  <button id="loginBtn" class="btn">Login</button>
-</div>
-
-<div id="metadataScreen" class="hidden p-6">
-  <div class="flex justify-between">
-    <h2>Metadata</h2>
-    <button id="logoutBtn" class="btn">Logout</button>
+    <button id="loginBtn" class="btn">Login</button>
+    <div id="loginError" class="text-red-400 mt-2"></div>
   </div>
 
-  <div id="metadataList" class="mt-4"></div>
+  <div id="metadataScreen" class="hidden h-screen flex flex-col">
 
-  <button id="backupBtn" class="btn mt-4">Backup Selected</button>
-</div>
+    <!-- NAVBAR -->
+    <div class="bg-gray-800 px-6 py-3 flex justify-between items-center">
+      <div>
+        <span class="text-gray-400">Org:</span>
+        <span id="orgName" class="text-indigo-400"></span>
+      </div>
 
-<script src="renderer.js"></script>
+      <div class="space-x-4">
+        <button id="logoutBtn" class="btn">Logout</button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="flex-1 overflow-auto p-6">
+      <div id="metadataList"></div>
+
+      <div class="mt-6">
+        <button id="backupBtn" class="btn">Backup Selected</button>
+        <div id="backupProgress" class="mt-2 text-green-400"></div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <script src="renderer.js"></script>
 </body>
+
 </html>
