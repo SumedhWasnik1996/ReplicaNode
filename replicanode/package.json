@@ -8,5 +8,10 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^40.4.1",
+    "fs-extra": "^11.3.3",
+    "jsforce": "^3.10.14"
+  }
 }
