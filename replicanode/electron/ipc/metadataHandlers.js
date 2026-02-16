@@ -8,7 +8,6 @@ function registerHandlers() {
             return {success : false, message: "Invalid Credentails"};
         }
         const sfconnector = await connector.login(username, password);
-        console.log('SF connector : ',sfconnector);
         return sfconnector;
     });
 
@@ -26,13 +25,11 @@ function registerHandlers() {
     });
 
     ipcMain.handle("getMetadataItems", async (e, type) => {
-        const conn = getCurrentOrgConnection();
-        return await getMetadataItems(conn, type);
+        return await connector.getMetadataItems(type);
     });
 
     ipcMain.handle("getMetadataContent", async (e, type, name) => {
-        const conn = getCurrentOrgConnection();
-        return await getMetadataContent(conn, type, name);
+        return await connector.getMetadataContent(type, name);
     });
 
 }

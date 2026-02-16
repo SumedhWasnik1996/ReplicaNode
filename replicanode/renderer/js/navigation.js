@@ -30,7 +30,9 @@ export async function showScreen(screenFile) {
   const html = await fetch(`screens/${screenFile}`).then(r => r.text());
   container.innerHTML = html;
 
+  const state = getState();
+
   initLogin();
-  initMetadata();
+  if(state.isLoggedIn) initMetadata();
   initSettings();
 }
