@@ -1,5 +1,5 @@
 {
-  "name"   : "replicanode",
+  "name"   : "Replica Node",
   "version": "1.0.0",
   "main"   : "electron/main.js",
   "scripts": {
