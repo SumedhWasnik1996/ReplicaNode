@@ -108,6 +108,7 @@ function renderMobileSelect() {
 async function loadMetadataItems(type) {
 
   const items = await window.api.getMetadataItems(type);
+  console.log('Metadata Items : ', items);
   metadataState.currentItems = items || [];
   metadataState.filteredItems = [...metadataState.currentItems];
 
@@ -123,13 +124,13 @@ function renderContent() {
     <div class="bg-gray-800 rounded-lg p-3 flex justify-between items-center shadow hover:bg-gray-750">
       <label class="flex items-center gap-2 text-sm truncate">
         <input type="checkbox"
-               value="${item}"
-               ${metadataState.selected.has(item) ? "checked" : ""}
-               onchange="toggleSelection('${item}', this.checked)">
-        <span class="truncate">${item}</span>
+               value="${item.id}"
+               ${metadataState.selected.has(item.id) ? "checked" : ""}
+               onchange="toggleSelection('${item.id}', this.checked)">
+        <span class="truncate">${item.fullName}</span>
       </label>
 
-      <button onclick="viewMetadata('${metadataState.activeType}','${item}')"
+      <button onclick="viewMetadata('${metadataState.activeType}','${item.fullName}')"
               class="text-blue-400 hover:text-blue-300 text-lg px-2">
         🔍
       </button>
@@ -140,14 +141,18 @@ function renderContent() {
 window.viewMetadata = async function (type, name) {
   const viewer = document.getElementById("fileViewer");
   viewer.innerText = "Loading...";
+  console.log('name ', name);
 
-  const content = await window.api.getMetadataContent(type, name);
-  if (!content) {
+  const detail = metadataState.currentItems.find(metadata => metadata.fullName === name);
+  console.log("metadata details : ", detail);
+  const metadataContent = await window.api.getMetadataContent(type, detail);
+
+  if (!metadataContent.success) {
     viewer.innerText = "No viewable content available.";
     return;
   }
 
-  viewer.innerText = typeof content === "object" ? JSON.stringify(content, null, 2) : content;
+  viewer.innerText = metadataContent.content || 'unable to preview';
 
   // Auto scroll to top
   viewer.scrollTop = 0;
