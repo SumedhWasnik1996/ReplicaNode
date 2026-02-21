@@ -11,18 +11,17 @@ export function initLogin() {
     const u = "salesforcedeveloper086@playful-panda-fn4s1l.com"; //document.getElementById("username").value;
     const p = "qwerT123456$$s7bFRR00Fu4Nx2nbxCJwubIf"; //document.getElementById("password").value;
     
-    if (!u || !p) {
-      document.getElementById("loginError").innerText =
-        "Please enter username and password";
+    if(!u || !p){
+      document.getElementById("loginError").innerText = "Please enter username and password";
       return;
     }
 
     const res = await window.api.login(u, p);
-
-    if (res.success) {
+    
+    if(res.success){
       setState({ isLoggedIn: true, currentOrg: res?.org || "test org" });
       showScreen("metadata.html");
-    } else {
+    }else{
       document.getElementById("loginError").innerText = res.message;
     }
   };
