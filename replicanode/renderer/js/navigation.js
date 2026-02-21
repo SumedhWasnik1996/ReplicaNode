@@ -17,9 +17,7 @@ export function initNavbar() {
 function refreshNavbar() {
   const state = getState();
 
-  document
-    .getElementById("navMetadata")
-    .classList.toggle("hidden", !state.isLoggedIn);
+  document.getElementById("navMetadata").classList.toggle("hidden", !state.isLoggedIn);
 
   document.getElementById("orgLabel").innerText =
     state.currentOrg || "";
