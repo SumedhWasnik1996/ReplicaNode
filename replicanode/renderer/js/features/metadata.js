@@ -1,4 +1,3 @@
-
 import { renderFilePreview } from "./filePreview.js";
 
 const currentMetadataState = {
@@ -172,7 +171,7 @@ window.viewMetadata = async function(type, name){
         return;
     }
 
-    renderFilePreview("fileViewer", type, apiResponseDetails.apiResponse);
+    await renderFilePreview("fileViewer", type, apiResponseDetails.apiResponse);
 };
 
 window.toggleSelection = function(item, checked){
