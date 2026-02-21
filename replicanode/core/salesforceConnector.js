@@ -1,172 +1,174 @@
-const jsforce = require("jsforce");
-const fs      = require("fs-extra");
-const path    = require("path");
+const{ dialog } = require("electron");
+const jsforce    = require("jsforce");
+const fs         = require("fs-extra");
+const path       = require("path");
+const AdmZip     = require("adm-zip");
 
 let currentConnection = null;
-let currentOrg        = null;
+let currentOrg = null;
 
-const METADATA_API_TYPE_MAP = {
+const METADATA_API_TYPE_MAP ={
 
-  // ---------------- TOOLING ----------------
-  ApexClass                           : 'tooling',
-  ApexComponent                       : 'tooling',
-  ApexEmailNotifications              : 'tooling',
-  ApexPage                            : 'tooling',
-  ApexTestSuite                       : 'tooling',
-  ApexTrigger                         : 'tooling',
-  CustomLabels                        : 'tooling',
+    // ---------------- TOOLING ----------------
+    ApexClass: 'tooling',
+    ApexComponent: 'tooling',
+    ApexEmailNotifications: 'tooling',
+    ApexPage: 'tooling',
+    ApexTestSuite: 'tooling',
+    ApexTrigger: 'tooling',
+    CustomLabels: 'tooling',
 
-  // ---------------- TOOLING BUNDLE ----------------
-  AuraDefinitionBundle                : 'tooling-bundle',
-  LightningComponentBundle            : 'tooling-bundle',
+    // ---------------- TOOLING BUNDLE ----------------
+    AuraDefinitionBundle: 'tooling-bundle',
+    LightningComponentBundle: 'tooling-bundle',
 
-  // ---------------- METADATA BINARY ----------------
-  Document                            : 'metadata-binary',
-  StaticResource                      : 'metadata-binary',
+    // ---------------- METADATA BINARY ----------------
+    Document: 'metadata-binary',
+    StaticResource: 'metadata-binary',
 
-  // ---------------- ORG SETTINGS ----------------
-  Settings                            : 'org-settings',
+    // ---------------- ORG SETTINGS ----------------
+    Settings: 'org-settings',
 
-  // ---------------- METADATA ----------------
-  AIApplication                       : 'metadata',
-  AIApplicationConfig                 : 'metadata',
-  AccessControlPolicy                 : 'metadata',
-  ActionLinkGroupTemplate             : 'metadata',
-  AnalyticSnapshot                    : 'metadata',
-  AnimationRule                       : 'metadata',
-  AppMenu                             : 'metadata',
-  ApprovalProcess                     : 'metadata',
-  AssignmentRules                     : 'metadata',
-  Audience                            : 'metadata',
-  AuthProvider                        : 'metadata',
-  AutoResponseRules                   : 'metadata',
-  BatchProcessJobDefinition           : 'metadata',
-  BlacklistedConsumer                 : 'metadata',
-  BrandingSet                         : 'metadata',
-  BriefcaseDefinition                 : 'metadata',
-  CMSConnectSource                    : 'metadata',
-  CallCenter                          : 'metadata',
-  CallCoachingMediaProvider           : 'metadata',
-  CanvasMetadata                      : 'metadata',
-  Certificate                         : 'metadata',
-  ChannelLayout                       : 'metadata',
-  ChatterExtension                    : 'metadata',
-  CleanDataService                    : 'metadata',
-  Community                           : 'metadata',
-  CommunityTemplateDefinition         : 'metadata',
-  CommunityThemeDefinition            : 'metadata',
-  ConnectedApp                        : 'metadata',
-  ContentAsset                        : 'metadata',
-  CorsWhitelistOrigin                 : 'metadata',
-  CspTrustedSite                      : 'metadata',
-  CustomApplication                   : 'metadata',
-  CustomApplicationComponent          : 'metadata',
-  CustomFeedFilter                    : 'metadata',
-  CustomHelpMenuSection               : 'metadata',
-  CustomIndex                         : 'metadata',
-  CustomMetadata                      : 'metadata',
-  CustomNotificationType              : 'metadata',
-  CustomObject                        : 'metadata',
-  CustomObjectTranslation             : 'metadata',
-  CustomPageWebLink                   : 'metadata',
-  CustomPermission                    : 'metadata',
-  CustomSite                          : 'metadata',
-  CustomTab                           : 'metadata',
-  Dashboard                           : 'metadata',
-  DataCategoryGroup                   : 'metadata',
-  DelegateGroup                       : 'metadata',
-  DuplicateRule                       : 'metadata',
-  EclairGeoData                       : 'metadata',
-  EmailServicesFunction               : 'metadata',
-  EmailTemplate                       : 'metadata',
-  EmbeddedServiceBranding             : 'metadata',
-  EmbeddedServiceConfig               : 'metadata',
-  EmbeddedServiceFlowConfig           : 'metadata',
-  EmbeddedServiceMenuSettings         : 'metadata',
-  EntitlementProcess                  : 'metadata',
-  EntitlementTemplate                 : 'metadata',
-  EscalationRules                     : 'metadata',
-  ExperienceBundle                    : 'metadata',
-  ExternalDataSource                  : 'metadata',
-  ExternalServiceRegistration         : 'metadata',
-  FlexiPage                           : 'metadata',
-  Flow                                : 'metadata',
-  FlowCategory                        : 'metadata',
-  FlowDefinition                      : 'metadata',
-  GatewayProviderPaymentMethodType    : 'metadata',
-  GlobalValueSet                      : 'metadata',
-  GlobalValueSetTranslation           : 'metadata',
-  Group                               : 'metadata',
-  HomePageComponent                   : 'metadata',
-  HomePageLayout                      : 'metadata',
-  IframeWhiteListUrlSettings          : 'metadata',
-  InboundNetworkConnection            : 'metadata',
-  InstalledPackage                    : 'metadata',
-  KeywordList                         : 'metadata',
-  Layout                              : 'metadata',
-  LeadConvertSettings                 : 'metadata',
-  Letterhead                          : 'metadata',
-  LightningBolt                       : 'metadata',
-  LightningExperienceTheme            : 'metadata',
-  LightningMessageChannel             : 'metadata',
-  LightningOnboardingConfig           : 'metadata',
-  LiveChatSensitiveDataRule           : 'metadata',
-  MLDataDefinition                    : 'metadata',
-  MLPredictionDefinition              : 'metadata',
-  MLRecommendationDefinition          : 'metadata',
-  ManagedContentType                  : 'metadata',
-  ManagedTopics                       : 'metadata',
-  MatchingRules                       : 'metadata',
-  MilestoneType                       : 'metadata',
-  MobileApplicationDetail             : 'metadata',
-  MobileSecurityPolicy                : 'metadata',
-  ModerationRule                      : 'metadata',
-  MutingPermissionSet                 : 'metadata',
-  MyDomainDiscoverableLogin           : 'metadata',
-  NamedCredential                     : 'metadata',
-  NavigationMenu                      : 'metadata',
-  Network                             : 'metadata',
-  NetworkBranding                     : 'metadata',
-  NotificationTypeConfig              : 'metadata',
-  OauthCustomScope                    : 'metadata',
-  OutboundNetworkConnection           : 'metadata',
-  PathAssistant                       : 'metadata',
-  PaymentGatewayProvider              : 'metadata',
-  PermissionSet                       : 'metadata',
-  PermissionSetGroup                  : 'metadata',
-  PersonAccountOwnerPowerUser         : 'metadata',
-  PlatformCachePartition              : 'metadata',
-  PlatformEventChannel                : 'metadata',
-  PlatformEventChannelMember          : 'metadata',
-  PostTemplate                        : 'metadata',
-  Profile                             : 'metadata',
-  ProfilePasswordPolicy               : 'metadata',
-  ProfileSessionSetting               : 'metadata',
-  Prompt                              : 'metadata',
-  Queue                               : 'metadata',
-  QuickAction                         : 'metadata',
-  RecommendationStrategy              : 'metadata',
-  RecordActionDeployment              : 'metadata',
-  RedirectWhitelistUrl                : 'metadata',
-  RemoteSiteSetting                   : 'metadata',
-  Report                              : 'metadata',
-  ReportType                          : 'metadata',
-  RestrictionRule                     : 'metadata',
-  Role                                : 'metadata',
-  SamlSsoConfig                       : 'metadata',
-  Scontrol                            : 'metadata',
-  SharingRules                        : 'metadata',
-  SharingSet                          : 'metadata',
-  SiteDotCom                          : 'metadata',
-  StandardValueSet                    : 'metadata',
-  StandardValueSetTranslation         : 'metadata',
-  SynonymDictionary                   : 'metadata',
-  TopicsForObjects                    : 'metadata',
-  TransactionSecurityPolicy           : 'metadata',
-  Translations                        : 'metadata',
-  UserCriteria                        : 'metadata',
-  UserProvisioningConfig              : 'metadata',
-  Workflow                            : 'metadata'
+    // ---------------- METADATA ----------------
+    AIApplication: 'metadata',
+    AIApplicationConfig: 'metadata',
+    AccessControlPolicy: 'metadata',
+    ActionLinkGroupTemplate: 'metadata',
+    AnalyticSnapshot: 'metadata',
+    AnimationRule: 'metadata',
+    AppMenu: 'metadata',
+    ApprovalProcess: 'metadata',
+    AssignmentRules: 'metadata',
+    Audience: 'metadata',
+    AuthProvider: 'metadata',
+    AutoResponseRules: 'metadata',
+    BatchProcessJobDefinition: 'metadata',
+    BlacklistedConsumer: 'metadata',
+    BrandingSet: 'metadata',
+    BriefcaseDefinition: 'metadata',
+    CMSConnectSource: 'metadata',
+    CallCenter: 'metadata',
+    CallCoachingMediaProvider: 'metadata',
+    CanvasMetadata: 'metadata',
+    Certificate: 'metadata',
+    ChannelLayout: 'metadata',
+    ChatterExtension: 'metadata',
+    CleanDataService: 'metadata',
+    Community: 'metadata',
+    CommunityTemplateDefinition: 'metadata',
+    CommunityThemeDefinition: 'metadata',
+    ConnectedApp: 'metadata',
+    ContentAsset: 'metadata',
+    CorsWhitelistOrigin: 'metadata',
+    CspTrustedSite: 'metadata',
+    CustomApplication: 'metadata',
+    CustomApplicationComponent: 'metadata',
+    CustomFeedFilter: 'metadata',
+    CustomHelpMenuSection: 'metadata',
+    CustomIndex: 'metadata',
+    CustomMetadata: 'metadata',
+    CustomNotificationType: 'metadata',
+    CustomObject: 'metadata',
+    CustomObjectTranslation: 'metadata',
+    CustomPageWebLink: 'metadata',
+    CustomPermission: 'metadata',
+    CustomSite: 'metadata',
+    CustomTab: 'metadata',
+    Dashboard: 'metadata',
+    DataCategoryGroup: 'metadata',
+    DelegateGroup: 'metadata',
+    DuplicateRule: 'metadata',
+    EclairGeoData: 'metadata',
+    EmailServicesFunction: 'metadata',
+    EmailTemplate: 'metadata',
+    EmbeddedServiceBranding: 'metadata',
+    EmbeddedServiceConfig: 'metadata',
+    EmbeddedServiceFlowConfig: 'metadata',
+    EmbeddedServiceMenuSettings: 'metadata',
+    EntitlementProcess: 'metadata',
+    EntitlementTemplate: 'metadata',
+    EscalationRules: 'metadata',
+    ExperienceBundle: 'metadata',
+    ExternalDataSource: 'metadata',
+    ExternalServiceRegistration: 'metadata',
+    FlexiPage: 'metadata',
+    Flow: 'metadata',
+    FlowCategory: 'metadata',
+    FlowDefinition: 'metadata',
+    GatewayProviderPaymentMethodType: 'metadata',
+    GlobalValueSet: 'metadata',
+    GlobalValueSetTranslation: 'metadata',
+    Group: 'metadata',
+    HomePageComponent: 'metadata',
+    HomePageLayout: 'metadata',
+    IframeWhiteListUrlSettings: 'metadata',
+    InboundNetworkConnection: 'metadata',
+    InstalledPackage: 'metadata',
+    KeywordList: 'metadata',
+    Layout: 'metadata',
+    LeadConvertSettings: 'metadata',
+    Letterhead: 'metadata',
+    LightningBolt: 'metadata',
+    LightningExperienceTheme: 'metadata',
+    LightningMessageChannel: 'metadata',
+    LightningOnboardingConfig: 'metadata',
+    LiveChatSensitiveDataRule: 'metadata',
+    MLDataDefinition: 'metadata',
+    MLPredictionDefinition: 'metadata',
+    MLRecommendationDefinition: 'metadata',
+    ManagedContentType: 'metadata',
+    ManagedTopics: 'metadata',
+    MatchingRules: 'metadata',
+    MilestoneType: 'metadata',
+    MobileApplicationDetail: 'metadata',
+    MobileSecurityPolicy: 'metadata',
+    ModerationRule: 'metadata',
+    MutingPermissionSet: 'metadata',
+    MyDomainDiscoverableLogin: 'metadata',
+    NamedCredential: 'metadata',
+    NavigationMenu: 'metadata',
+    Network: 'metadata',
+    NetworkBranding: 'metadata',
+    NotificationTypeConfig: 'metadata',
+    OauthCustomScope: 'metadata',
+    OutboundNetworkConnection: 'metadata',
+    PathAssistant: 'metadata',
+    PaymentGatewayProvider: 'metadata',
+    PermissionSet: 'metadata',
+    PermissionSetGroup: 'metadata',
+    PersonAccountOwnerPowerUser: 'metadata',
+    PlatformCachePartition: 'metadata',
+    PlatformEventChannel: 'metadata',
+    PlatformEventChannelMember: 'metadata',
+    PostTemplate: 'metadata',
+    Profile: 'metadata',
+    ProfilePasswordPolicy: 'metadata',
+    ProfileSessionSetting: 'metadata',
+    Prompt: 'metadata',
+    Queue: 'metadata',
+    QuickAction: 'metadata',
+    RecommendationStrategy: 'metadata',
+    RecordActionDeployment: 'metadata',
+    RedirectWhitelistUrl: 'metadata',
+    RemoteSiteSetting: 'metadata',
+    Report: 'metadata',
+    ReportType: 'metadata',
+    RestrictionRule: 'metadata',
+    Role: 'metadata',
+    SamlSsoConfig: 'metadata',
+    Scontrol: 'metadata',
+    SharingRules: 'metadata',
+    SharingSet: 'metadata',
+    SiteDotCom: 'metadata',
+    StandardValueSet: 'metadata',
+    StandardValueSetTranslation: 'metadata',
+    SynonymDictionary: 'metadata',
+    TopicsForObjects: 'metadata',
+    TransactionSecurityPolicy: 'metadata',
+    Translations: 'metadata',
+    UserCriteria: 'metadata',
+    UserProvisioningConfig: 'metadata',
+    Workflow: 'metadata'
 };
 
 async function login(username, password){
@@ -177,61 +179,39 @@ async function login(username, password){
         currentConnection = conn;
         currentOrg        = username.replace(/[@.]/g, "_");
 
-        return { 
-            success : true, 
-            org     : currentOrg 
+        return {
+            success : true,
+            org     : currentOrg
         };
-    }catch(err){
+    }catch(error){
         return {
             success : false,
-            message : err.message || "Login failed"
+            message : error.message || "Login failed"
         };
     }
 }
 
 async function getMetadata(){
-    if(!currentConnection){ 
-        throw new Error("Not logged in");
-    }
-
-    const meta = await currentConnection.metadata
-                            .describe(currentConnection?.version || 60);
-    
-    return meta.metadataObjects.map(m => m.xmlName);
-}
-
-async function backupMetadata(selectedTypes){
     if(!currentConnection){
         throw new Error("Not logged in");
     }
 
-    const backupDir = path.join(__dirname, "..", "data", currentOrg);
-    await fs.ensureDir(backupDir);
+    const meta = await currentConnection.metadata
+                                .describe(currentConnection?.version || 60);
 
-    for(const type of selectedTypes){
-        const result = await currentConnection.metadata.list([{ type }], currentConnection?.version || 60);
-        await fs.writeJson(
-            path.join(backupDir, `${type}.json`),
-            result || []
-        );
-    }
-
-    return { 
-        success  : true, 
-        location : backupDir
-    };
+    return meta.metadataObjects.map(m => m.xmlName);
 }
 
 async function getMetadataItems(type){
-    if(!currentConnection){ 
+    if(!currentConnection){
         throw new Error("Not logged in");
     }
 
     const result = await currentConnection.metadata
                             .list(
-                                    [{ type }], 
-                                    currentConnection.version || 60
-                                );
+                                [{ type }],
+                                currentConnection.version || 60
+                            );
     if(!result){
         return [];
     }
@@ -258,18 +238,18 @@ async function getMetadataContent(type, details){
         }
 
         switch(apiType){
-            case 'tooling': {
+            case 'tooling' : {
                 const toolingApiResponse = await currentConnection.tooling
                                                     .sobject(type)
                                                     .retrieve(details.id);
 
                 //console.log("Tooling Api Response : ", toolingApiResponse);
                 return {
-                    success     : true,
-                    apiResponse : toolingApiResponse
+                    success: true,
+                    apiResponse: toolingApiResponse
                 };
             }
-            case 'tooling-bundle': {
+            case 'tooling-bundle' : { 
 
                 const query = `SELECT Id, FilePath, Format, Source  
                                     FROM  ${type === 'AuraDefinitionBundle'
@@ -289,20 +269,20 @@ async function getMetadataContent(type, details){
                     apiResponse : toolingBundleApiResponse
                 };
             }
-            case 'metadata': {
+            case 'metadata' : {
                 const metadataApiResponse = await currentConnection.metadata
-                                                        .read(
-                                                            type,
-                                                            details.fullName
-                                                        );
+                                                    .read(
+                                                        type,
+                                                        details.fullName
+                                                    );
 
-               // console.log("Metadata Api Response : ", metadataApiResponse);
-                return {
+                // console.log("Metadata Api Response : ", metadataApiResponse);
+                return{
                     success     : true,
                     apiResponse : metadataApiResponse
                 };
             }
-            case 'metadata-binary': {
+            case 'metadata-binary' : {
                 const metadataBindaryApiResponse = {};
 
                 if(type === 'StaticResource'){
@@ -310,15 +290,15 @@ async function getMetadataContent(type, details){
                                                             .read(
                                                                 'StaticResource',
                                                                 details.fullName
-                                                            );                                             
-                }else if(type === 'Document'){
+                                                            );
+                } else if(type === 'Document'){
                     const doumentData = await currentConnection
-                                                .sobject('Document')
-                                                .retrieve(details.id);
+                                                    .sobject('Document')
+                                                    .retrieve(details.id);
 
                     const buffer = Buffer.from(doumentData.Body, 'base64');
-                    
-                    metadataBindaryApiResponse = {
+
+                    metadataBindaryApiResponse = { 
                         ...doumentData,
                         decodedBody: buffer
                     }
@@ -330,18 +310,18 @@ async function getMetadataContent(type, details){
                 return {
                     success     : true,
                     apiResponse : metadataBindaryApiResponse
-                }; 
+                };
             }
-            case 'org-settings': {
-                const orgSettingRequest = {
+            case 'org-settings' : {
+                const orgSettingRequest = { 
                     apiVersion    : currentConnection.version,
                     singlePackage : true,
                     unpackaged    : {
-                                     types : [{
-                                            name    : 'Settings',
-                                            members : ['*']
-                                        }]
-                    }
+                                        types : [{
+                                                    name    : 'Settings',
+                                                    members : ['*']
+                                                }]
+                                    }
                 };
 
                 const orgSettingApiResponse = await currentConnection.metadata
@@ -349,32 +329,152 @@ async function getMetadataContent(type, details){
                                                         .complete();
 
                 //console.log("Org Settings Api Response : ", orgSettingApiResponse);
-                return {
+                return{
                     success     : true,
                     apiResponse : orgSettingApiResponse
                 };
-            }            
-            default:{
+            }
+            default : {
                 throw new Error(`Api not configured for ${type}`);
             }
         }
 
-    }catch(error){
+    } catch(error){
         console.error("Error reading metadata:", error);
-        return {
+        return{
             success: false,
             error: error.message
         };
     }
 }
 
-
 function logout(){
     currentConnection = null;
     currentOrg = null;
 }
 
-module.exports = {
+async function backupMetadata(selectedMetadataList){
+    try{
+        if(!currentConnection){
+            throw new Error("Not logged in");
+        }
+
+        const result = await dialog.showOpenDialog({
+            properties : ["openDirectory", "createDirectory"]
+        });
+
+        if(result.canceled){
+            return;
+        }
+
+        const backupDir   = path.join(__dirname, "..", "data", currentOrg);
+        const forceAppDir = path.join(backupDir, "force-app", "main", "default");
+
+        await fs.ensureDir(forceAppDir);
+
+        await fs.writeJson(
+            path.join(backupDir, "sfdx-project.json"),
+            {
+                packageDirectories : [{
+                                        path    : "force-app",
+                                        default : true
+                                    }],
+                name               : 'replicanode-backup',
+                namespcae          : '',
+                sfdcLoginUrl       : "https://login.salesforce.com",
+                sourceApiVersion   : `${currentConnection.apiVersion}` || "60.0"
+            },
+            {
+                spaces: 2
+            }
+        );
+
+        const packageXML  = buildPackageXML(selectedMetadataList, `${currentConnection.apiVersion}` || "60.0");
+        const packagePath = path.join(backupDir, "package.xml");
+        await fs.writeFile(packagePath, packageXML);
+
+        const zipBuffer = await retrieveMetadataZip(conn, packageXML, `${currentConnection.apiVersion}` || "60.0");
+        const zip       = new AdmZip(zipBuffer);
+        zip.extractAllTo(forceAppDir, true);
+
+        return {
+            success: true,
+            location: backupDir
+        };
+
+    } catch(error){
+        console.error("Backup error:", error);
+        return {
+            success: false,
+            message: error.message || "Backup failed"
+        };
+    }
+}
+
+function buildPackageXML(metadataList,  apiVersion = "60.0"){
+    const typeMap ={};
+
+    for(const item of metadataList){
+        if(!typeMap[item.type]){
+            typeMap[item.type] = [];
+        }
+        typeMap[item.type].push(item.name);
+    }
+
+    let typesXml = "";
+
+    for(const type in typeMap){
+        const members = typeMap[type]
+                        .map(name => `<members>${name}</members>`)
+                        .join("\n");
+
+        typesXml += `<types>
+                        ${members}
+                        <name>${type}</name>
+                     </types>`;
+    }
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+            <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+                ${typesXml}
+                <version>${apiVersion || 60.0}</version>
+            </Package>`;
+}
+
+async function retrieveMetadataZip(conn, packageXML, apiVersion = "60.0"){
+    return new Promise((resolve, reject) =>{
+        const retrieveRequest ={
+            apiVersion: `${apiVersion}`,
+            unpackaged: packageXML
+        };
+
+        conn.metadata.retrieve(retrieveRequest,(error, res) =>{
+            if(error){
+                return reject(error);
+            }
+
+            conn.metadata.checkRetrieveStatus(
+                res.id,
+                true,
+               (statusErr, statusRes) =>{
+                    if(statusErr){
+                        return reject(statusErr);
+                    }
+
+                    if(!statusRes.success){
+                        return reject(new Error("Metadata retrieve failed"));
+                    }
+
+                    const zipBuffer = Buffer.from(statusRes.zipFile, "base64");
+
+                    resolve(zipBuffer);
+                }
+            );
+        });
+    });
+}
+
+module.exports ={
     login,
     getMetadata,
     backupMetadata,

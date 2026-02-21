@@ -1,5 +1,5 @@
 const { ipcMain } = require("electron");
-const connector = require("../../core/salesforceConnector");
+const connector   = require("../../core/salesforceConnector");
 
 function registerHandlers() {
 
@@ -15,10 +15,6 @@ function registerHandlers() {
         return await connector.getMetadata();
     });
 
-    ipcMain.handle("backup", async (event, selected) => {
-        return await connector.backupMetadata(selected);
-    });
-
     ipcMain.handle("logout", async () => {
         connector.logout();
         return { success: true };
@@ -32,6 +28,9 @@ function registerHandlers() {
         return await connector.getMetadataContent(type, name);
     });
 
+    ipcMain.handle("backup", async (event, selectedMetadataList) => {
+        return await connector.backupMetadata(selectedMetadataList);
+    });
 }
 
 module.exports = registerHandlers;

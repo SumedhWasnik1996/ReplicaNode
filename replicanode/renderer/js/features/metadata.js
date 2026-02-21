@@ -1,9 +1,10 @@
-import { renderFilePreview } from "./filePreview.js";
+import { renderFilePreview }      from "./filePreview.js";
+import { updateSelectedMetadata } from "../store.js";
 
 const currentMetadataState = {
     allMetadataTypes      : [],
     filteredMetadataTypes : [],
-    selected              : new Set(),
+    selected              : new Map(),
     activeType            : "",
     currentItems          : [],
     filteredItems         : []
@@ -138,20 +139,36 @@ function renderContent(){
                         <div class="bg-gray-800 rounded-lg p-3 flex justify-between items-center shadow hover:bg-gray-750">
                             <label class="flex items-center gap-2 text-sm truncate">
                                 <input type="checkbox"
-                                        value="${item.id}"
-                                        ${currentMetadataState.selected.has(item.id) ? "checked" : ""}
+                                        value="${item.fullName}"
+                                        ${currentMetadataState.selected
+                                                                .get(currentMetadataState.activeType)
+                                                                ?.has(item.fullName) 
+                                            ? "checked" 
+                                            : ""
+                                        }
                                         onchange="toggleSelection('${item.id}', this.checked)">
                                 <span class="truncate">
                                     ${item.fullName}
                                 </span>
                             </label>
 
-                            <button onclick="viewMetadata('${currentMetadataState.activeType}','${item.fullName}')"
-                                    class="text-blue-400 hover:text-blue-300 text-lg px-2">
+                            <button class="text-blue-400 hover:text-blue-300 text-lg px-2" 
+                                    onclick="viewMetadata('${currentMetadataState.activeType}','${item.fullName}')">
                                 🔍
                             </button>
                         </div>
                     `).join("");
+}
+
+function updateStateForSelectedMetadata(){
+    const type = currentMetadataState.activeType;
+
+    const selectedArray = Array.from(currentMetadataState.selected).map(name => ({
+        type,
+        name
+    }));
+
+    updateSelectedMetadata(selectedArray);
 }
 
 window.viewMetadata = async function(type, name){
@@ -174,13 +191,22 @@ window.viewMetadata = async function(type, name){
     await renderFilePreview("fileViewer", type, apiResponseDetails.apiResponse);
 };
 
-window.toggleSelection = function(item, checked){
-    if(checked){ 
-        currentMetadataState.selected.add(item);
+window.toggleSelection = function(name, checked){
+    const type = currentMetadataState.activeType;
+
+    if(!currentMetadataState.selected.has(type)){
+        currentMetadataState.selected.set(type, new Set());
     }
-    else{
-        currentMetadataState.selected.delete(item);
+
+    const typeSet = currentMetadataState.selected.get(type);
+
+    if(checked){
+        typeSet.add(name);
+    }else{
+        typeSet.delete(name);
     }
+
+    updateStateForSelectedMetadata();
 };
 
 window.selectAll = function(value){
