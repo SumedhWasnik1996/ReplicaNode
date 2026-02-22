@@ -1,9 +1,10 @@
-import { renderFilePreview } from "./filePreview.js";
+import { renderFilePreview }      from "./filePreview.js";
+import { updateSelectedMetadata } from "../store.js";
 
 const currentMetadataState = {
     allMetadataTypes      : [],
     filteredMetadataTypes : [],
-    selected              : new Set(),
+    selected              : new Map(),
     activeType            : "",
     currentItems          : [],
     filteredItems         : []
@@ -118,6 +119,9 @@ function renderMobileSelect(){
 async function loadMetadataItems(type){
 
     const items = await window.api.getMetadataItems(type);
+
+    items.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
     currentMetadataState.currentItems  = items || [];
     currentMetadataState.filteredItems = [...currentMetadataState.currentItems];
 
@@ -138,26 +142,47 @@ function renderContent(){
                         <div class="bg-gray-800 rounded-lg p-3 flex justify-between items-center shadow hover:bg-gray-750">
                             <label class="flex items-center gap-2 text-sm truncate">
                                 <input type="checkbox"
-                                        value="${item.id}"
-                                        ${currentMetadataState.selected.has(item.id) ? "checked" : ""}
-                                        onchange="toggleSelection('${item.id}', this.checked)">
+                                        value="${item.fullName}"
+                                        ${currentMetadataState.selected
+                                                                .get(currentMetadataState.activeType)
+                                                                ?.has(item.fullName) 
+                                            ? "checked" 
+                                            : ""
+                                        }
+                                        onchange="toggleSelection('${item.fullName}', this.checked)">
                                 <span class="truncate">
                                     ${item.fullName}
                                 </span>
                             </label>
 
-                            <button onclick="viewMetadata('${currentMetadataState.activeType}','${item.fullName}')"
-                                    class="text-blue-400 hover:text-blue-300 text-lg px-2">
+                            <button class="text-blue-400 hover:text-blue-300 text-lg px-2" 
+                                    onclick="viewMetadata('${currentMetadataState.activeType}','${item.fullName}')">
                                 🔍
                             </button>
                         </div>
                     `).join("");
 }
 
+function updateStateForSelectedMetadata(){
+    console.log(currentMetadataState.selected);
+
+    let selectedMetadataArray = [];
+
+    for(const [key, value] of currentMetadataState.selected){
+        selectedMetadataArray.push({
+            type : key,
+            name : Array.from(value) 
+        });
+    }
+
+    console.log('Selected Metadata Array : ',selectedMetadataArray);
+
+    updateSelectedMetadata(selectedMetadataArray);
+}
+
 window.viewMetadata = async function(type, name){
     const viewer = document.getElementById("fileViewer");
     viewer.innerText = "Loading...";
-    console.log('name ', name);
 
     const detail = currentMetadataState.currentItems
                         .find(metadata => metadata.fullName === name);
@@ -174,13 +199,22 @@ window.viewMetadata = async function(type, name){
     await renderFilePreview("fileViewer", type, apiResponseDetails.apiResponse);
 };
 
-window.toggleSelection = function(item, checked){
-    if(checked){ 
-        currentMetadataState.selected.add(item);
+window.toggleSelection = function(name, checked){
+    const type = currentMetadataState.activeType;
+
+    if(!currentMetadataState.selected.has(type)){
+        currentMetadataState.selected.set(type, new Set());
     }
-    else{
-        currentMetadataState.selected.delete(item);
+
+    const typeSet = currentMetadataState.selected.get(type);
+
+    if(checked){
+        typeSet.add(name);
+    }else{
+        typeSet.delete(name);
     }
+
+    updateStateForSelectedMetadata();
 };
 
 window.selectAll = function(value){

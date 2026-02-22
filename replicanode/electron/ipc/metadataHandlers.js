@@ -1,12 +1,16 @@
 const { ipcMain } = require("electron");
-const connector = require("../../core/salesforceConnector");
+const connector   = require("../../core/salesforceConnector");
 
 function registerHandlers() {
 
     ipcMain.handle("login", async (event, username, password) => {
         if(!username || !password){
-            return {success : false, message: "Invalid Credentails"};
+            return {
+                success : false, 
+                message : "Invalid Credentails"
+            };
         }
+        
         const sfconnector = await connector.login(username, password);
         return sfconnector;
     });
@@ -15,13 +19,11 @@ function registerHandlers() {
         return await connector.getMetadata();
     });
 
-    ipcMain.handle("backup", async (event, selected) => {
-        return await connector.backupMetadata(selected);
-    });
-
     ipcMain.handle("logout", async () => {
         connector.logout();
-        return { success: true };
+        return { 
+            success : true 
+        };
     });
 
     ipcMain.handle("getMetadataItems", async (e, type) => {
@@ -32,6 +34,9 @@ function registerHandlers() {
         return await connector.getMetadataContent(type, name);
     });
 
+    ipcMain.handle("backup", async (event, selectedMetadataList) => {
+        return await connector.backupMetadata(selectedMetadataList);
+    });
 }
 
 module.exports = registerHandlers;

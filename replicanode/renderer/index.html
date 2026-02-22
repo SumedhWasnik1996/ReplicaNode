@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html class="h-screen overflow-hidden bg-gray-900">
 
-
 <head>
     <script>
         var require = {
-            paths: { vs: "../node_modules/monaco-editor/min/vs" }
-        };
+                            paths : { vs: "../node_modules/monaco-editor/min/vs" }
+                        };
     </script>
 
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
@@ -14,15 +13,21 @@
     <script>
         window.MonacoEnvironment = {
             getWorkerUrl: function () {
-                return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
-        self.MonacoEnvironment = { baseUrl: '../node_modules/monaco-editor/min/' };
-        importScripts('../node_modules/monaco-editor/min/vs/base/worker/workerMain.js');
-      `)}`;
+                return `data:text/javascript;charset=utf-8,
+                            ${encodeURIComponent(`
+                                self.MonacoEnvironment = { 
+                                                            baseUrl : '../node_modules/monaco-editor/min/'
+                                                          };
+                                importScripts('../node_modules/monaco-editor/min/vs/base/worker/workerMain.js');
+                            `)}
+                        `;
             }
         };
     </script>
 
-    <script type="module" src="./js/app.js"></script>
+    <script type="module" src="./js/app.js">
+    </script>
+    
     <link href="./style.css" rel="stylesheet">
 </head>
 
@@ -47,6 +52,11 @@
 
                     <!-- Desktop Right: Notifications + Avatar -->
                     <div class="hidden md:flex items-center space-x-4">
+
+                        <button id="backupBtn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium transition">
+                            Backup
+                        </button>
+
                         <!-- Notifications -->
                         <button
                             class="relative rounded-full p-1 text-gray-400 hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-indigo-500">
@@ -123,8 +133,8 @@
 
         <main>
             <div class="mx-auto">
-                <div id="screens"></div>
-                <!-- Your content -->
+                <div id="screens">
+                </div>
             </div>
         </main>
     </div>
