@@ -119,6 +119,9 @@ function renderMobileSelect(){
 async function loadMetadataItems(type){
 
     const items = await window.api.getMetadataItems(type);
+
+    items.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
     currentMetadataState.currentItems  = items || [];
     currentMetadataState.filteredItems = [...currentMetadataState.currentItems];
 
