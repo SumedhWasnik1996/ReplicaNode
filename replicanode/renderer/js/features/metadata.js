@@ -1,7 +1,7 @@
-import { renderFilePreview }      from "./filePreview.js";
-import { updateSelectedMetadata } from "../store.js";
+import{ renderFilePreview }      from "./filePreview.js";
+import{ updateSelectedMetadata } from "../store.js";
 
-const currentMetadataState = {
+const state = {
     allMetadataTypes      : [],
     filteredMetadataTypes : [],
     selected              : new Map(),
@@ -14,222 +14,190 @@ export async function initMetadata(){
     const metadata = await window.api.getMetadata();
     metadata.sort();
 
-    currentMetadataState.allMetadataTypes = metadata || [];
-    currentMetadataState.filteredMetadataTypes = [...currentMetadataState.allMetadataTypes];
+    state.allMetadataTypes      = metadata || [];
+    state.filteredMetadataTypes = [...state.allMetadataTypes];
 
     renderSidebar();
     renderMobileSelect();
 
-    if(currentMetadataState.allMetadataTypes.length > 0){
-        currentMetadataState.activeType = currentMetadataState.allMetadataTypes[0];
-        loadMetadataItems(currentMetadataState.activeType);
+    if(state.allMetadataTypes.length > 0){
+        state.activeType = state.allMetadataTypes[0];
+        await loadMetadataItems(state.activeType);
     }
+
+    wireControls();
+}
+
+function wireControls(){
+    document.getElementById("itemSearch")
+                ?.addEventListener("input", e => filterItems(e.target.value));
+
+    document.getElementById("selectAllBtn")
+                ?.addEventListener("click",() => selectAll(true));
+
+    document.getElementById("deselectAllBtn")
+                ?.addEventListener("click",() => selectAll(false));
 }
 
 function renderSidebar(){
-    const sidebar = document.getElementById("metadataSidebar");
-
-    sidebar.innerHTML = `
-        <div class="p-2 border-b border-white/10">
-            <input 
-                id="sidebarSearch"
-                type="text"
-                placeholder="Search metadata..."
-                class="w-full px-2 py-1 rounded bg-gray-800 text-white text-sm"/>
-        </div>
-        
-        <div id="sidebarList" class="overflow-y-auto flex-1">
-        </div>
-    `;
-
-    document
-        .getElementById("sidebarSearch")
-        .addEventListener("input", (e) => filterSidebar(e.target.value));
-
     renderSidebarList();
+
+    document.getElementById("sidebarSearch")
+                ?.addEventListener("input", e => filterSidebar(e.target.value));
 }
 
 function renderSidebarList(){
-    const list = document.getElementById("sidebarList");
+    const list     = document.getElementById("sidebarList");
     list.innerHTML = "";
 
-    currentMetadataState.filteredMetadataTypes.forEach(type => {
+    state.filteredMetadataTypes.forEach(type =>{
         const btn = document.createElement("button");
-        btn.innerText = type;
-        btn.className = "w-full text-left px-3 py-2 hover:bg-gray-700 border-b border-white/10 text-sm";
 
-        btn.onclick =() => {
-            currentMetadataState.activeType = type;
-            highlightActiveType();
-            loadMetadataItems(type);
+        btn.className = `w-full text-left px-3 py-2 text-sm hover:bg-gray-800
+                            ${state.activeType === type 
+                                    ? "bg-indigo-600/20 text-indigo-300 border-l-2 border-indigo-500" 
+                                    : "text-gray-300"}
+                            `;
+
+        btn.textContent = type;
+
+        btn.onclick = async() => {
+            state.activeType = type;
+            renderSidebarList();
+            await loadMetadataItems(type);
         };
 
         list.appendChild(btn);
     });
-
-    highlightActiveType();
 }
 
 function filterSidebar(query){
-    currentMetadataState.filteredMetadataTypes =
-        currentMetadataState.allMetadataTypes
-            .filter(
-                type => type
-                            .toLowerCase()
-                            .includes(query.toLowerCase())
-            );
+    state.filteredMetadataTypes = state.allMetadataTypes.filter(t => t.toLowerCase().includes(query.toLowerCase()));
 
     renderSidebarList();
 }
 
-function highlightActiveType(){
-    const buttons = document.querySelectorAll("#sidebarList button");
-    buttons.forEach(btn => {
-        btn.classList.remove("bg-gray-700");
-        if(btn.innerText === currentMetadataState.activeType){
-            btn.classList.add("bg-gray-700");
-        }
-    });
-}
-
 function renderMobileSelect(){
     const select = document.getElementById("mobileGroupSelect");
-    
+
     if(!select){
         return;
     }
 
     select.innerHTML = "";
 
-    currentMetadataState.allMetadataTypes.forEach(type => {
+    state.allMetadataTypes.forEach(type =>{
         const option = document.createElement("option");
         option.value = type;
         option.text  = type;
         select.appendChild(option);
     });
 
-    select.value = currentMetadataState.activeType;
-    select.onchange = (e) => {
-        currentMetadataState.activeType = e.target.value;
+    select.onchange = async e =>{
+        state.activeType = e.target.value;
         renderSidebarList();
-        loadMetadataItems(currentMetadataState.activeType);
+        await loadMetadataItems(state.activeType);
     };
 }
 
 async function loadMetadataItems(type){
-
     const items = await window.api.getMetadataItems(type);
 
     items.sort((a, b) => a.fullName.localeCompare(b.fullName));
 
-    currentMetadataState.currentItems  = items || [];
-    currentMetadataState.filteredItems = [...currentMetadataState.currentItems];
+    state.currentItems  = items || [];
+    state.filteredItems = [...state.currentItems];
 
-    renderContent();
+    renderItems();
+    updateSelectedCount();
 }
 
-function renderContent(){
+function renderItems(){
     const itemsList = document.getElementById("itemsList");
-    
-    if(!itemsList){
-        return;
+
+    itemsList.innerHTML = state.filteredItems.map(item =>{
+        const checked = state.selected.get(state.activeType)?.has(item.fullName);
+
+        return `<div class="group bg-gray-800/70 hover:bg-gray-800 rounded-lg p-3 flex items-center justify-between 
+                            cursor-pointer transition"
+                        onclick="viewMetadata('${state.activeType}','${item.fullName}')">
+                    <label class="flex items-center gap-3 text-sm truncate cursor-pointer">
+                        <input type="checkbox"
+                                class="accent-indigo-500"
+                                value="${item.fullName}"
+                                ${checked ? "checked" : ""}
+                                onclick="event.stopPropagation()"
+                                onchange="toggleSelection('${item.fullName}', this.checked)"/>
+                        <span class="truncate">${item.fullName}</span>
+                    </label>
+                    <span class="text-gray-500 group-hover:text-indigo-400">🔍</span>
+                </div>
+                `;
+                }).join("");
+}
+
+function updateSelectedCount(){
+    const el    = document.getElementById("selectedCount");
+    const count = state.selected.get(state.activeType)?.size || 0;
+    if(el){
+        el.textContent = `${count} selected`;
     }
-
-    // Render metadata items as cards
-    itemsList.innerHTML = currentMetadataState.filteredItems
-        .map(
-            item => `
-                        <div class="bg-gray-800 rounded-lg p-3 flex justify-between items-center shadow hover:bg-gray-750">
-                            <label class="flex items-center gap-2 text-sm truncate">
-                                <input type="checkbox"
-                                        value="${item.fullName}"
-                                        ${currentMetadataState.selected
-                                                                .get(currentMetadataState.activeType)
-                                                                ?.has(item.fullName) 
-                                            ? "checked" 
-                                            : ""
-                                        }
-                                        onchange="toggleSelection('${item.fullName}', this.checked)">
-                                <span class="truncate">
-                                    ${item.fullName}
-                                </span>
-                            </label>
-
-                            <button class="text-blue-400 hover:text-blue-300 text-lg px-2" 
-                                    onclick="viewMetadata('${currentMetadataState.activeType}','${item.fullName}')">
-                                🔍
-                            </button>
-                        </div>
-                    `).join("");
 }
 
 function updateStateForSelectedMetadata(){
-    console.log(currentMetadataState.selected);
+    const arr = [];
 
-    let selectedMetadataArray = [];
-
-    for(const [key, value] of currentMetadataState.selected){
-        selectedMetadataArray.push({
-            type : key,
-            name : Array.from(value) 
-        });
+    for(const [key, value] of state.selected){
+        arr.push({ type: key, name: Array.from(value) });
     }
 
-    console.log('Selected Metadata Array : ',selectedMetadataArray);
-
-    updateSelectedMetadata(selectedMetadataArray);
+    updateSelectedMetadata(arr);
+    updateSelectedCount();
 }
 
 window.viewMetadata = async function(type, name){
-    const viewer = document.getElementById("fileViewer");
-    viewer.innerText = "Loading...";
+    const header     = document.getElementById("previewHeader");
+    header.innerHTML = `<span class="text-gray-400">Loading ${name}…</span>`;
 
-    const detail = currentMetadataState.currentItems
-                        .find(metadata => metadata.fullName === name);
+    const detail = state.currentItems.find(m => m.fullName === name);
+    const res    = await window.api.getMetadataContent(type, detail);
 
-    const apiResponseDetails = await window.api.getMetadataContent(type, detail);
-
-    console.log('API Response Details : ', apiResponseDetails);
-
-    if(!apiResponseDetails.success){
-        viewer.innerText = apiResponseDetails?.error || "No viewable content available.";
+    if(!res.success){
+        document.getElementById("fileViewer").innerText = res?.error || "No viewable content available.";
         return;
     }
 
-    await renderFilePreview("fileViewer", type, apiResponseDetails.apiResponse);
+    header.innerHTML = `<span class="text-gray-300 font-medium">${name}</span>`;
+
+    await renderFilePreview("fileViewer", type, res.apiResponse);
 };
 
 window.toggleSelection = function(name, checked){
-    const type = currentMetadataState.activeType;
+    const type = state.activeType;
 
-    if(!currentMetadataState.selected.has(type)){
-        currentMetadataState.selected.set(type, new Set());
+    if(!state.selected.has(type)){
+        state.selected.set(type, new Set());
     }
 
-    const typeSet = currentMetadataState.selected.get(type);
+    const set = state.selected.get(type);
 
-    if(checked){
-        typeSet.add(name);
-    }else{
-        typeSet.delete(name);
-    }
+    checked ? set.add(name) : set.delete(name);
 
     updateStateForSelectedMetadata();
 };
 
 window.selectAll = function(value){
     document.querySelectorAll("#itemsList input[type='checkbox']")
-    .forEach(cb => {
-                cb.checked = value;
-                toggleSelection(cb.value, value);
-            });
+        .forEach(cb =>{
+            cb.checked = value;
+            toggleSelection(cb.value, value);
+        });
 };
 
 window.filterItems = function(query){
-    currentMetadataState.filteredItems = currentMetadataState.currentItems
-    .filter(i => i.toLowerCase()
-                    .includes(query.toLowerCase())
+    state.filteredItems = state.currentItems.filter(i =>
+        i.fullName.toLowerCase().includes(query.toLowerCase())
     );
 
-    renderContent();
+    renderItems();
 };
