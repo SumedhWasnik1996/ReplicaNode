@@ -5,8 +5,12 @@ function registerHandlers() {
 
     ipcMain.handle("login", async (event, username, password) => {
         if(!username || !password){
-            return {success : false, message: "Invalid Credentails"};
+            return {
+                success : false, 
+                message : "Invalid Credentails"
+            };
         }
+        
         const sfconnector = await connector.login(username, password);
         return sfconnector;
     });
@@ -17,7 +21,9 @@ function registerHandlers() {
 
     ipcMain.handle("logout", async () => {
         connector.logout();
-        return { success: true };
+        return { 
+            success : true 
+        };
     });
 
     ipcMain.handle("getMetadataItems", async (e, type) => {

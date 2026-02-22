@@ -1,4 +1,3 @@
-const{ dialog } = require("electron");
 const jsforce    = require("jsforce");
 const fs         = require("fs-extra");
 const path       = require("path");
@@ -359,15 +358,13 @@ async function backupMetadata(selectedMetadataList){
             throw new Error("Not logged in");
         }
 
-        const result = await dialog.showOpenDialog({
-            properties : ["openDirectory", "createDirectory"]
-        });
+        const safeOrgName = sanitizeOrgName(currentOrg);
 
-        if(result.canceled){
-            return;
-        }
+        const dataRoot         = path.join(__dirname, "..", "data");
+        const nextVersion      = await getNextOrgVersion(dataRoot, safeOrgName);
+        const versionedOrgName = `${safeOrgName}_v${nextVersion}`;
 
-        const backupDir   = path.join(__dirname, "..", "data", currentOrg);
+        const backupDir   = path.join(dataRoot, versionedOrgName);
         const forceAppDir = path.join(backupDir, "force-app", "main", "default");
 
         await fs.ensureDir(forceAppDir);
@@ -382,18 +379,20 @@ async function backupMetadata(selectedMetadataList){
                 name               : 'replicanode-backup',
                 namespcae          : '',
                 sfdcLoginUrl       : "https://login.salesforce.com",
-                sourceApiVersion   : `${currentConnection.apiVersion}` || "60.0"
+                sourceApiVersion   : `${currentConnection.apiVersion || "60.0"}`
             },
             {
                 spaces: 2
             }
         );
 
-        const packageXML  = buildPackageXML(selectedMetadataList, `${currentConnection.apiVersion}` || "60.0");
+        const packageObj = buildPackageObject(selectedMetadataList, `${currentConnection.apiVersion || "60.0"}`);
+        const packageXML = buildPackageXMLFromObject(packageObj);
+
         const packagePath = path.join(backupDir, "package.xml");
         await fs.writeFile(packagePath, packageXML);
 
-        const zipBuffer = await retrieveMetadataZip(conn, packageXML, `${currentConnection.apiVersion}` || "60.0");
+        const zipBuffer = await retrieveMetadataZip(currentConnection, packageObj, `${currentConnection.apiVersion || "60.0"}`);
         const zip       = new AdmZip(zipBuffer);
         zip.extractAllTo(forceAppDir, true);
 
@@ -411,67 +410,105 @@ async function backupMetadata(selectedMetadataList){
     }
 }
 
-function buildPackageXML(metadataList,  apiVersion = "60.0"){
-    const typeMap ={};
+function sanitizeOrgName(name) {
+    return name.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+async function getNextOrgVersion(baseDataDir, orgName) {
+    await fs.ensureDir(baseDataDir);
+
+    const entries = await fs.readdir(baseDataDir);
+    const regex = new RegExp(`^${orgName}_v(\\d+)$`);
+
+    let maxVersion = 0;
+
+    for(const entry of entries){
+        const match = entry.match(regex);
+        if(match){
+            const version = parseInt(match[1], 10);
+            if(version > maxVersion){
+                maxVersion = version;
+            }
+        }
+    }
+
+    return maxVersion + 1;
+}
+
+function buildPackageObject(metadataList, apiVersion = "60.0"){
+    const typeMap = {};
 
     for(const item of metadataList){
         if(!typeMap[item.type]){
             typeMap[item.type] = [];
         }
-        typeMap[item.type].push(item.name);
+        typeMap[item.type].push(...item.name);
     }
 
+    const types = Object.keys(typeMap).map(type => ({
+                                                name: type,
+                                                members: typeMap[type]
+                                            }));
+
+    return {
+        types,
+        version : apiVersion
+    };
+}
+
+function buildPackageXMLFromObject(pkgObj){
     let typesXml = "";
 
-    for(const type in typeMap){
-        const members = typeMap[type]
-                        .map(name => `<members>${name}</members>`)
-                        .join("\n");
+    for(const t of pkgObj.types){
+        const members = t.members
+                            .map(name => `<members>${name}</members>`)
+                            .join("\n");
 
         typesXml += `<types>
                         ${members}
-                        <name>${type}</name>
-                     </types>`;
+                        <name>${t.name}</name>
+                    </types>`;
     }
 
     return `<?xml version="1.0" encoding="UTF-8"?>
             <Package xmlns="http://soap.sforce.com/2006/04/metadata">
                 ${typesXml}
-                <version>${apiVersion || 60.0}</version>
+                <version>${pkgObj.version}</version>
             </Package>`;
 }
 
-async function retrieveMetadataZip(conn, packageXML, apiVersion = "60.0"){
-    return new Promise((resolve, reject) =>{
-        const retrieveRequest ={
-            apiVersion: `${apiVersion}`,
+async function retrieveMetadataZip(currentConnection, packageXML, apiVersion = "60.0") {
+    try{
+        console.log("Starting metadata retrieve...");
+
+        const retrieveRequest = {
+            apiVersion: apiVersion || "60.0",
             unpackaged: packageXML
         };
 
-        conn.metadata.retrieve(retrieveRequest,(error, res) =>{
-            if(error){
-                return reject(error);
-            }
+        // Start retrieve
+        const res = await currentConnection.metadata.retrieve(retrieveRequest);
+        console.log("Retrieve started:", res);
 
-            conn.metadata.checkRetrieveStatus(
-                res.id,
-                true,
-               (statusErr, statusRes) =>{
-                    if(statusErr){
-                        return reject(statusErr);
-                    }
+        // Poll for completion
+        const statusRes = await currentConnection.metadata.checkRetrieveStatus(res.id, true);
+        console.log("Retrieve Status response:", statusRes);
 
-                    if(!statusRes.success){
-                        return reject(new Error("Metadata retrieve failed"));
-                    }
+        console.log("Success    : ", statusRes.success);
+        console.log("File count : ", statusRes.fileProperties?.length);
+        console.log("Messages   : ", statusRes.messages);
 
-                    const zipBuffer = Buffer.from(statusRes.zipFile, "base64");
+        if(!statusRes.success){
+            throw new Error("Metadata retrieve failed");
+        }
 
-                    resolve(zipBuffer);
-                }
-            );
-        });
-    });
+        const zipBuffer = Buffer.from(statusRes.zipFile, "base64");
+        return zipBuffer;
+
+    }catch(error){
+        console.error("Metadata retrieve error:", error);
+        throw error;
+    }
 }
 
 module.exports ={

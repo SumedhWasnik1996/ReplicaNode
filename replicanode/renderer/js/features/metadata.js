@@ -146,7 +146,7 @@ function renderContent(){
                                             ? "checked" 
                                             : ""
                                         }
-                                        onchange="toggleSelection('${item.id}', this.checked)">
+                                        onchange="toggleSelection('${item.fullName}', this.checked)">
                                 <span class="truncate">
                                     ${item.fullName}
                                 </span>
@@ -161,20 +161,25 @@ function renderContent(){
 }
 
 function updateStateForSelectedMetadata(){
-    const type = currentMetadataState.activeType;
+    console.log(currentMetadataState.selected);
 
-    const selectedArray = Array.from(currentMetadataState.selected).map(name => ({
-        type,
-        name
-    }));
+    let selectedMetadataArray = [];
 
-    updateSelectedMetadata(selectedArray);
+    for(const [key, value] of currentMetadataState.selected){
+        selectedMetadataArray.push({
+            type : key,
+            name : Array.from(value) 
+        });
+    }
+
+    console.log('Selected Metadata Array : ',selectedMetadataArray);
+
+    updateSelectedMetadata(selectedMetadataArray);
 }
 
 window.viewMetadata = async function(type, name){
     const viewer = document.getElementById("fileViewer");
     viewer.innerText = "Loading...";
-    console.log('name ', name);
 
     const detail = currentMetadataState.currentItems
                         .find(metadata => metadata.fullName === name);
